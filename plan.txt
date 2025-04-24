@@ -1,0 +1,17 @@
+1) Download and install maven(if you dont already have it)
+    a) I downloaded the binary directly: https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.zip
+    b) Then unzip wherever you want to install the software(as this is direct binary, no need separate installation)
+    c) Then, add the bin/ subdirectory of the extracted apache-maven-3.9.9 folder to your system path(edit environment variables)
+    d) Try mvn -v, if it doesnt work: Restart and try again(it worked for me after restart)
+( ###2) Copy paste Langchain4j example agent using github models and run it)
+I already did this and since you cloned this repo, you dont need to worry about that.
+
+2) 
+    a)Create a GitHub Personal Access Token(PAT) if you dont already have one. 
+    b) Then load it to the environment directly(save it to .env for future use, but it doesnt load directly from .env, we have to load it manually)
+    c) This is done in windows vscode powershell terminal by:
+    ```$env:GITHUB_TOKEN="your_PAT"```
+
+3) Now you have everything ready...
+    a) mvn compile
+    b) mvn exec:java
