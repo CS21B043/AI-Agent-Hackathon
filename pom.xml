@@ -48,7 +48,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>com.example.GitHubModelsFunctionCallingExamples$Weather_From_Manual_Configuration</mainClass>
+                    <mainClass>com.example.GeminiExamples$Direct_Gemini_API_Calls</mainClass>
                 </configuration>
             </plugin>
         </plugins>
