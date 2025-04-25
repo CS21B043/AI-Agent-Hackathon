@@ -10,8 +10,16 @@ import dev.langchain4j.model.github.GitHubModelsChatModel;
 import dev.langchain4j.service.tool.DefaultToolExecutor;
 import dev.langchain4j.service.tool.ToolExecutor;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,69 +28,93 @@ import static dev.langchain4j.model.github.GitHubModelsChatModelName.GPT_4_O_MIN
 
 public class GitHubModelsFunctionCallingExamples {
 
-    /**
-     * This example demonstrates how to programmatically configure the low-level tool APIs, such as ToolSpecification,
-     * ToolExecutionRequest, and ToolExecutor.
-     * But it is recommended to use higher-level APIs as demonstrated here: https://docs.langchain4j.dev/tutorials/tools/#high-level-tool-api
-     * <p>
-     * This sample goes through 4 different steps:
-     * 1. Specify the tools (WeatherTools) and the query ("What will the weather be like in London tomorrow?")
-     * 2. Model generate function arguments (model decides which tools to invoke)
-     * 3. User execute function to obtain tool results (using ToolExecutor)
-     * 4. Model generate final response based on the query and the tool results
-     */
     public static class Weather_From_Manual_Configuration {
 
-        static GitHubModelsChatModel model = GitHubModelsChatModel.builder()
-                .gitHubToken(System.getenv("GITHUB_TOKEN"))
-                .modelName(GPT_4_O_MINI)
-                .logRequestsAndResponses(true)
-                .build();
+        public static void main(String[] args) throws Exception {
+            // Existing Weather example code...
+            GitHubModelsChatModel model = GitHubModelsChatModel.builder()
+                    .gitHubToken(System.getenv("GITHUB_TOKEN"))
+                    .modelName(GPT_4_O_MINI)
+                    .logRequestsAndResponses(true)
+                    .build();
 
-        public static void main(String[] args)  {
-
-            // STEP 1: User specify tools and query
-            // Tools
+            // Step 1
             WeatherTools weatherTools = new WeatherTools();
             List<ToolSpecification> toolSpecifications = ToolSpecifications.toolSpecificationsFrom(weatherTools);
-            // User query
             List<ChatMessage> chatMessages = new ArrayList<>();
-            UserMessage userMessage = userMessage("What will the weather be like in London tomorrow?");
-            chatMessages.add(userMessage);
+            chatMessages.add(userMessage("What will the weather be like in London tomorrow?"));
 
             ChatRequest request = ChatRequest.builder()
                     .messages(chatMessages)
                     .toolSpecifications(toolSpecifications)
                     .build();
 
-            // STEP 2: Model generate function arguments
+            // Step 2
             AiMessage aiMessage = model.chat(request).aiMessage();
-            List<ToolExecutionRequest> toolExecutionRequests = aiMessage.toolExecutionRequests();
-            System.out.println("Out of the " + toolSpecifications.size() + " functions declared in WeatherTools, " + toolExecutionRequests.size() + " will be invoked:");
-            toolExecutionRequests.forEach(toolExecutionRequest -> {
-                System.out.println("Function name: " + toolExecutionRequest.name());
-                System.out.println("Function args:" + toolExecutionRequest.arguments());
-            });
             chatMessages.add(aiMessage);
 
+            // Step 3
+            for (ToolExecutionRequest toolExecutionRequest : aiMessage.toolExecutionRequests()) {
+                ToolExecutor executor = new DefaultToolExecutor(weatherTools, toolExecutionRequest);
+                String result = executor.execute(toolExecutionRequest, UUID.randomUUID().toString());
+                chatMessages.add(ToolExecutionResultMessage.from(toolExecutionRequest, result));
+            }
 
-            // STEP 3: User execute function to obtain tool results
-            toolExecutionRequests.forEach(toolExecutionRequest -> {
-                ToolExecutor toolExecutor = new DefaultToolExecutor(weatherTools, toolExecutionRequest);
-                System.out.println("Now let's execute the function " + toolExecutionRequest.name());
-                String result = toolExecutor.execute(toolExecutionRequest, UUID.randomUUID().toString());
-                ToolExecutionResultMessage toolExecutionResultMessages = ToolExecutionResultMessage.from(toolExecutionRequest, result);
-                chatMessages.add(toolExecutionResultMessages);
-            });
-
-
-            // STEP 4: Model generate final response
+            // Step 4
             AiMessage finalResponse = model.chat(chatMessages).aiMessage();
-            System.out.println(finalResponse.text()); //According to the payment data, the payment status of transaction T1005 is Pending.
+            System.out.println(finalResponse.text());
+
+            // New: Test image generation via Google Gemini API
+            String prompt = "Hi, can you create a 3d rendered image of three girls and a boy, all Indians of age 22, winning $5K in a hackathon and celebrating? Two of the girls are tall and slim, one is short with curly hair, and the boy is of medium height and fat";
+            String apiKey = System.getenv("GEMINI_API_KEY");
+            if (apiKey == null) {
+                System.err.println("Please set GEMINI_API_KEY in your environment.");
+                return;
+            }
+            byte[] imageBytes = generateImage(prompt, apiKey);
+            Path outputPath = Path.of("gemini-image.png");
+            Files.write(outputPath, imageBytes);
+            System.out.println("Image saved to " + outputPath.toAbsolutePath());
+        }
+
+        /**
+         * Calls Google Gemini image generation API and returns raw image bytes.
+         */
+        public static byte[] generateImage(String prompt, String apiKey) throws IOException, InterruptedException {
+            HttpClient client = HttpClient.newHttpClient();
+            String url = String.format(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=%s",
+                    apiKey);
+
+            String jsonPayload = "{\n" +
+                    "  \"contents\": [{\n" +
+                    "    \"parts\": [\n" +
+                    "      {\"text\": \"" + prompt + "\"}\n" +
+                    "    ]\n" +
+                    "  }],\n" +
+                    "  \"generationConfig\":{\"responseModalities\":[\"TEXT\",\"IMAGE\"]}\n" +
+                    "}";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            // Extract base64 data from JSON (simple parse)
+            String body = response.body();
+            String marker = "\"data\": \"";
+            int start = body.indexOf(marker);
+            if (start < 0) throw new IOException("No data field in response");
+            start += marker.length();
+            int end = body.indexOf('"', start);
+            String base64 = body.substring(start, end);
+            return Base64.getDecoder().decode(base64);
         }
     }
 
-    static class WeatherTools {
+    public static class WeatherTools {
 
         @Tool("Returns the weather forecast for tomorrow for a given city")
         String getWeather(@P("The city for which the weather forecast should be returned") String city) {
