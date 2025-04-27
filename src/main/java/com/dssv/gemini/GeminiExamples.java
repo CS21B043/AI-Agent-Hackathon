@@ -1,4 +1,4 @@
-package com.example;
+package com.dssv.gemini; // CHANGE ME to your package
 
 import java.io.IOException;
 // Removed unused HTTP client imports from here
@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map; // For generationConfig example
 import java.util.UUID;
 
+import com.dssv.gemini.GeminiApiClient; 
+import com.dssv.gemini.GeminiModelInfo; // Assuming this is the correct import for your model info class
 public class GeminiExamples {
 
     // New class demonstrating direct Gemini API calls via GeminiApiClient
@@ -179,12 +181,10 @@ public class GeminiExamples {
                 //  System.out.println("---------------------------");
 
 
-            } catch (IOException | InterruptedException e) {
+            } catch (Exception e) {
                 System.err.println("An error occurred during API call: " + e.getMessage());
                 // Log the stack trace for debugging
                 e.printStackTrace();
-            } catch (IllegalArgumentException e) {
-                 System.err.println("Configuration error: " + e.getMessage());
             }
         }
     }

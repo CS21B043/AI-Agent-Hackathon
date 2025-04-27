@@ -1,5 +1,4 @@
-// src/main/java/com/example/GeminiApiClient.java
-package com.example;
+package com.dssv.gemini; // CHANGE ME to your package
 
 import java.io.IOException;
 import java.net.URI;
@@ -12,6 +11,8 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import com.dssv.gemini.GeminiModelInfo; // CHANGE ME to your model info package
 
 // Consider using a proper JSON library (like Jackson, Gson, org.json) for robust payload creation and parsing.
 // This example uses String manipulation for simplicity, similar to the original code, but it's less robust.
@@ -144,6 +145,22 @@ public class GeminiApiClient {
          return extractTextFromResponse(response.body());
      }
 
+    // --- Multimodal Input (Text + Document Data in Bytes for Understanding) ---
+    public String generateContentWithDocumentBytes(String modelId, String textPrompt, String mimeType, byte[] documentBytes) throws IOException, InterruptedException {
+         String base64DocumentData = Base64.getEncoder().encodeToString(documentBytes);
+
+         String url = GeminiModelInfo.getGenerateContentUrl(modelId, apiKey);
+         String jsonPayload = String.format(
+                 "{\"contents\":[{\"parts\":[" +
+                 "{\"inline_data\": {\"mime_type\":\"%s\", \"data\": \"%s\"}}," +
+                 "{\"text\": \"%s\"}" +
+                 "]}]}",
+                 mimeType, base64DocumentData, escapeJsonString(textPrompt)
+         );
+
+         HttpResponse<String> response = sendRequest(url, jsonPayload);
+         return extractTextFromResponse(response.body());
+     }
 
     // --- Placeholder for File Upload (Needed for Audio/Video/Large Images) ---
     // This is complex, involving multiple API calls (start, upload, finalize)

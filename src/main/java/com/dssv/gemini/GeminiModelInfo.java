@@ -1,5 +1,5 @@
 // src/main/java/com/example/GeminiModelInfo.java
-package com.example;
+package com.dssv.gemini; // CHANGE ME to your package
 
 import java.util.Map;
 import java.util.Optional;
