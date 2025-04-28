@@ -1,4 +1,4 @@
-package com.dssv.gemini; // CHANGE ME to your package
+package com.dssv.gemini; 
 
 import java.io.IOException;
 import java.net.URI;

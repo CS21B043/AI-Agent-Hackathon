@@ -7,7 +7,7 @@ This application utilizes **Jersey**, the reference implementation for the **JAX
 * **Simplicity:** The combination allows for rapid development of REST endpoints using standard annotations without needing to incorporate the full breadth of features (like advanced dependency injection, data persistence layers, etc.) that Spring Boot readily provides, which might be overkill for this specific use case.
 * **Modularity:** It allows adding specific functionalities as needed without inheriting a large opinionated framework structure by default.
 
-While Spring Boot excels in building complex, feature-rich applications with its extensive ecosystem and auto-configuration capabilities, the focused, standards-based approach of Jersey/Grizzly was deemed a better fit for the defined scope of this API wrapper project.
+While Spring Boot excels in building complex, feature-rich applications with its extensive ecosystem and auto-configuration capabilities, the focused, standards-based approach of Jersey/Grizzly was deemed a better fit for the defined scope of this project.
 
 
 ## API Endpoints
