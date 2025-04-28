@@ -11,11 +11,18 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map; // For config map
+import java.util.List; // For messages list
+import java.nio.charset.StandardCharsets;
 
 // Assume GeminiApiClient is your class interacting with the actual Gemini API
 import com.dssv.gemini.GeminiApiClient;
 import com.dssv.gemini.GeminiModelInfo; // If used for model IDs
 import com.dssv.pojos.*;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;   // For error handling
+
 
 @Path("/gemini/v1") // Base path for all Gemini related endpoints
 public class GeminiApiResource {
@@ -66,6 +73,85 @@ public class GeminiApiResource {
                            .entity("{\"error\": \"Failed to generate text: " + e.getMessage() + "\"}").build();
         }
     }
+
+    @POST
+    @Path("/chat")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response chat(ChatRequest request) {
+        if (request == null || request.getMessages().isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("{\"error\":\"'messages' must include at least one turn.\"}")
+                        .build();
+        }
+        try {
+            // 1. Build the contents array from the conversation history
+            List<Map<String, Object>> contents = request.getMessages().stream()
+                .map(msg -> Map.of(
+                    "role", msg.getRole(),
+                    "parts", List.of(Map.of("text", msg.getText()))
+                ))
+                .toList();
+
+            // 2. Serialize payload
+            String payload = new ObjectMapper()
+                .writeValueAsString(Map.of("contents", contents));
+            String reply = client.generateMultiTurnChat(defaultTextModel, payload);
+            System.out.println("Generated response: " + reply.substring(0, Math.min(reply.length(), 100)) + "...");
+            return Response.ok(new GeminiTextResponse(reply)).build();
+            } catch (Exception e) {
+            System.err.println("Error generating text: " + e.getMessage());
+            e.printStackTrace(); // Log the full stack trace
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                           .entity("{\"error\": \"Failed to generate text: " + e.getMessage() + "\"}").build();
+        }
+    }
+
+    @POST
+    @Path("/chat/stream")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response streamChat(ChatRequest request) {
+        if (request == null || request.getMessages().isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("{\"error\":\"'messages' must include at least one turn.\"}")
+                        .build();
+        }
+
+        StreamingOutput stream = output -> {
+            // Build same payload as above
+            List<Map<String, Object>> contents = request.getMessages().stream()
+                .map(msg -> Map.of(
+                    "role", msg.getRole(),
+                    "parts", List.of(Map.of("text", msg.getText()))
+                ))
+                .toList();
+            String payload = new ObjectMapper()
+                .writeValueAsString(Map.of("contents", contents));
+
+            System.out.println("Streaming chat request payload: " + payload.substring(0, Math.min(payload.length(), 100)) + "...");
+            try {
+                // Use the client to stream the response
+                client.streamMultiTurnChat(defaultTextModel, payload, chunk -> {
+                    try{    
+                        output.write(chunk.getBytes(StandardCharsets.UTF_8));
+                        output.flush();
+                    } catch (IOException e) {
+                        System.err.println("Error writing chunk to output stream: " + e.getMessage());
+                        e.printStackTrace(); // Log the full stack trace
+                    }
+                });
+            } catch (Exception e) {
+                System.err.println("Error during streaming: " + e.getMessage());
+                e.printStackTrace(); // Log the full stack trace
+                throw new RuntimeException("Streaming error: " + e.getMessage(), e);
+            }
+        };
+
+        // Use chunked transfer encoding automatically via StreamingOutput :contentReference[oaicite:3]{index=3}.
+        return Response.ok(stream).build();
+    }
+
 
     // --- Text Generation with Config Endpoint ---
     @POST

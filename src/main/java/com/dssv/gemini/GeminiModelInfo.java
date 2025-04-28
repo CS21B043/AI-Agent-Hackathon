@@ -26,6 +26,8 @@ public class GeminiModelInfo {
     // Base URL for file uploads (Needed for image/audio/video understanding via file_data)
     private static final String BASE_UPLOAD_URL = "https://generativelanguage.googleapis.com/upload/v1beta/files?key=%s";
 
+    private static final String BASE_STREAM_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?key=%s";
+    
 
     public static String getModelId(String modelName) {
         return Optional.ofNullable(MODEL_IDS.get(modelName))
@@ -34,10 +36,18 @@ public class GeminiModelInfo {
 
     public static String getGenerateContentUrl(String modelId, String apiKey) {
         // Validate if the provided modelId is one of the known values (optional, but good practice)
-        // if (!MODEL_IDS.containsValue(modelId)) {
-        //     System.err.println("Warning: Using an unknown or potentially unsupported modelId: " + modelId);
-        // }
+        if (!MODEL_IDS.containsValue(modelId)) {
+            System.err.println("Warning: Using an unknown or potentially unsupported modelId: " + modelId);
+        }
         return String.format(BASE_GENERATE_URL, modelId, apiKey);
+    }
+
+    public static String getStreamingContentUrl(String modelId, String apiKey) {
+        // Validate if the provided modelId is one of the known values (optional, but good practice)
+        if (!MODEL_IDS.containsValue(modelId)) {
+            System.err.println("Warning: Using an unknown or potentially unsupported modelId: " + modelId);
+        }
+        return String.format(BASE_STREAM_URL, modelId, apiKey);
     }
 
      public static String getFileUploadUrl(String apiKey) {

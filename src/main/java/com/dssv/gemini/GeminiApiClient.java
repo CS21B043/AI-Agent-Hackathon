@@ -11,8 +11,15 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.function.Consumer;
 
-import com.dssv.gemini.GeminiModelInfo; // CHANGE ME to your model info package
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;   // For error handling
+
+import com.dssv.gemini.GeminiModelInfo; 
+import com.dssv.pojos.Message; 
 
 // Consider using a proper JSON library (like Jackson, Gson, org.json) for robust payload creation and parsing.
 // This example uses String manipulation for simplicity, similar to the original code, but it's less robust.
@@ -60,7 +67,98 @@ public class GeminiApiClient {
         return extractTextFromResponse(response.body());
     }
 
-     public String generateTextWithConfig(String modelId, String prompt, Map<String, Object> generationConfig) throws IOException, InterruptedException {
+    public String generateMultiTurnChat(String modelId, String payload)
+        throws IOException, InterruptedException {
+        String url = GeminiModelInfo.getGenerateContentUrl(modelId, apiKey);
+        HttpResponse<String> response = sendRequest(url, payload);
+        JsonNode root = new ObjectMapper().readTree(response.body());
+        // Extract the first candidate’s text
+        return root.path("candidates").get(0)
+                .path("content")
+                .path("parts").get(0)
+                .path("text").asText();
+    }
+
+    public static void processStream(String responseBody, Consumer<String> onChunk, ObjectMapper mapper) {
+        StringBuilder jsonBuffer = new StringBuilder();
+        int braceDepth = 0; // To track nesting level of {}
+        boolean inObject = false; // To track if we are currently inside a potential top-level object
+
+        // Iterate character by character for precise object boundary detection
+        for (int i = 0; i < responseBody.length(); i++) {
+            char c = responseBody.charAt(i);
+
+            // Start accumulating if we encounter the beginning of an object
+            if (c == '{') {
+                if (braceDepth == 0) { // Start of a new top-level object
+                    jsonBuffer.setLength(0); // Clear buffer for the new object
+                    inObject = true;
+                }
+                braceDepth++;
+            }
+
+            // Append the character if we are inside an object
+            if (inObject) {
+                jsonBuffer.append(c);
+            }
+
+            if (c == '}') {
+                 if (braceDepth > 0) { // Avoid decrementing below zero if JSON is malformed
+                     braceDepth--;
+                 }
+                 // Check if we've closed the top-level object
+                if (braceDepth == 0 && inObject) {
+                    inObject = false; // No longer actively inside this object
+                    try {
+                        String potentialJson = jsonBuffer.toString();
+                        // System.out.println("Attempting to parse: " + potentialJson); // Debugging: show buffered object
+                        JsonNode chunk = mapper.readTree(potentialJson);
+
+                        // Navigate safely using path() which returns MissingNode if path doesn't exist
+                        JsonNode textNode = chunk.path("candidates")
+                                                .path(0)           // Get first candidate safely
+                                                .path("content")
+                                                .path("parts")
+                                                .path(0)           // Get first part safely
+                                                .path("text");
+
+                        if (!textNode.isMissingNode()) { // Check if the text field was found
+                            onChunk.accept(textNode.asText());
+                        } else {
+                            // Handle cases where the structure might differ slightly (e.g., error messages)
+                            // Or maybe the last chunk has different info (like finishReason)
+                             System.err.println("Warning: 'text' field not found in chunk: " + potentialJson.substring(0, Math.min(potentialJson.length(), 100)) + "...");
+                        }
+
+                    } catch (JsonProcessingException e) {
+                        // Handle cases where the buffered content isn't valid JSON
+                        System.err.println("Error processing JSON chunk: " + jsonBuffer.toString());
+                        e.printStackTrace();
+                        // Decide if you want to stop processing or try to recover
+                    }
+                    // Buffer is implicitly ready for the next object as it's cleared when '{' at depth 0 is found
+                }
+            }
+            // Ignore characters outside of top-level objects (like the outer [], commas, whitespace)
+        }
+
+        if (braceDepth != 0) {
+             System.err.println("Warning: Stream ended with unbalanced braces. Depth: " + braceDepth + ". Buffer: " + jsonBuffer.toString());
+        }
+    }
+
+    public void streamMultiTurnChat(String modelId, String payload, Consumer<String> onChunk) throws IOException, InterruptedException {
+
+        String url = GeminiModelInfo.getStreamingContentUrl(modelId, apiKey);
+        HttpResponse<String> response = sendRequest(url, payload);
+        ObjectMapper mapper = new ObjectMapper();
+        String res = response.body();
+        System.out.println("Response Body: " + res); // Debugging output
+        processStream(res, onChunk, mapper);
+    }
+
+
+    public String generateTextWithConfig(String modelId, String prompt, Map<String, Object> generationConfig) throws IOException, InterruptedException {
         String url = GeminiModelInfo.getGenerateContentUrl(modelId, apiKey);
         // Basic JSON construction for generationConfig. Needs a proper library for complex objects.
         String configJson = generationConfig.entrySet().stream()

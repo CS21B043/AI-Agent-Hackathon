@@ -75,3 +75,9 @@ Simplest Web Server: What's the easiest way to get a web server running within a
 Embedded Servers: Frameworks like Spark Java, Javalin, or Spring Boot are designed for this. They bundle a lightweight server (like Jetty or Undertow) within the application JAR.
 JAX-RS with Embedded Server: We can use a JAX-RS implementation (like Jersey) combined with an embedded HTTP server it supports (like Grizzly or the JDK's built-in HTTP server). This aligns more directly with the previous JAX-RS example. Jersey's integration with Grizzly is a common choice for simple setups.
 Choose Jersey + Grizzly: This seems like a good balance. It uses the standard JAX-RS annotations from the previous answer but embeds the server, making it runnable directly from a main method, which feels closer to the user's current mvn exec:java workflow (though the execution purpose changes from "run once" to "start server").
+
+
+New Backend Running Instructions:
+
+1) mvn clean package
+2) java -jar target/gemini-api-server-1.0-SNAPSHOT.jar
