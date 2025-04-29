@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
 
 import com.dssv.pojos.*;
 import com.dssv.gemini.GeminiApiClient;
@@ -16,6 +17,22 @@ public class AssignmentGenerator {
          if (input == null) return "";
          return input.replace("\\", "\\\\").replace("\"", "\\\"");
      }
+
+      public static String[] extractDescCodeTests(String jsonResponse) throws IOException {
+        // 1) Protect already-escaped "\n", then escape any literal newlines
+        String fixed = jsonResponse
+            .replaceAll("\\\\n", "\\\\\\\\n")    // protect existing escapes :contentReference[oaicite:0]{index=0}
+            .replaceAll("\\r?\\n", "\\\\n");     // escape raw LF and CRLF sequences
+
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(fixed);   // parse into JsonNode :contentReference[oaicite:1]{index=1}
+
+        String desc  = root.path("description").asText("");    // asText() for value nodes
+        String code  = root.path("code").asText("");
+        String tests = root.path("testCases").toString();     // JsonNode.toString() emits valid JSON :contentReference[oaicite:2]{index=2}
+
+        return new String[]{ desc, code, tests };
+    }
 
     public static Assignment generatePersonalizedAssignment(
             String studentId, List<Assignment> previousAssignments,
@@ -72,29 +89,11 @@ public class AssignmentGenerator {
         // Basic parsing for demonstration - HIGHLY RECOMMENDED to use a library
         Assignment newAssignment = new Assignment();
         try{
-          ObjectMapper mapper = new ObjectMapper();
-          String fixed = jsonResponse
-            // first, protect existing \n so we don’t double-escape
-            .replaceAll("\\\\n", "\\\\\\\\n")
-            // then escape all literal newlines
-            .replaceAll("\\r?\\n", "\\\\n");
-
-          JsonNode root = mapper.readTree(fixed);
-
-          // Safely extract fields (returns empty string if missing)
-          String desc  = root.path("description").asText("");
-          String code  = root.path("code").asText("");
-
-          JsonNode testsNode = root.path("testCases");
-            // if (testsNode.isArray()) {
-            //     for (JsonNode testCase : testsNode) {
-            //         String inputPart  = testCase.path("input").toString();
-            //         String expected   = testCase.path("expectedOutput").asText();
-            //         // … process each testCase node …
-            //     }
-            // }
-          String tests = testsNode.toString(); 
-
+          
+          String[] parts = extractDescCodeTests(jsonResponse);
+          String desc  = parts[0];
+          String code  = parts[1];
+          String tests = parts[2]; 
           newAssignment.setId("temp-" + System.currentTimeMillis());
           newAssignment.setStudentId(studentId);
           // Set the extracted values
@@ -125,7 +124,7 @@ public class AssignmentGenerator {
 
         promptBuilder.append("Assignment Requirements:\n")
                      .append("- Provide a clear problem description suitable for intermediate learners.\n")
-                     .append("- Include starter code or a required structure (e.g., class structure in Java).\n")
+                     .append("- Include starter code or a required structure (e.g., class structure in Python).\n")
                      .append("- Provide 3-4 clear test cases (input and expected output).\n")
                      .append("- Format the output as a JSON object with keys: 'description', 'code', 'testCases'.\n\n");
 
@@ -149,7 +148,9 @@ public class AssignmentGenerator {
 
 
         // --- Call Gemini ---
-        String jsonResponse = geminiClient.generateText(modelId, prompt);
+        Map<String, Object> output_json_config = Map.of("response_mime_type", "application/json");
+        // --- Call Gemini ---
+        String jsonResponse = geminiClient.generateTextWithConfig(modelId, prompt, output_json_config);
         System.out.println("AssignmentGenerator (Group) Response:\n" + jsonResponse);
 
 
@@ -157,13 +158,10 @@ public class AssignmentGenerator {
          Assignment newAssignment = new Assignment();
          // Group assignments might not have a studentId initially, DB associates later
          try {
-               ObjectMapper mapper = new ObjectMapper();
-               JsonNode root = mapper.readTree(jsonResponse);
-
-               // Safely extract fields (returns empty string if missing)
-               String desc  = root.path("description").asText("");
-               String code  = root.path("code").asText("");
-               String tests = root.path("testCases").asText("");
+               String[] parts = extractDescCodeTests(jsonResponse);
+               String desc  = parts[0];
+               String code  = parts[1];
+               String tests = parts[2]; 
 
                newAssignment.setId("temp-" + System.currentTimeMillis());
                newAssignment.setStudentId("Teacher-Generated"); // Placeholder 
