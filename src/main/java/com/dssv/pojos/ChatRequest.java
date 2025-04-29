@@ -1,22 +1,21 @@
-// File: src/main/java/com/dssv/pojos/ChatRequest.java
 package com.dssv.pojos;
 
 import java.util.List;
 
 public class ChatRequest {
-    private List<ChatMessage> messages;
+    private List<Message> messages;
 
     public ChatRequest() {}
 
-    public ChatRequest(List<ChatMessage> messages) {
+    public ChatRequest(List<Message> messages) {
         this.messages = messages;
     }
 
-    public List<ChatMessage> getMessages() {
+    public List<Message> getMessages() {
         return messages;
     }
 
-    public void setMessages(List<ChatMessage> messages) {
+    public void setMessages(List<Message> messages) {
         this.messages = messages;
     }
 }

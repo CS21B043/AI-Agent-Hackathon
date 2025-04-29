@@ -20,15 +20,18 @@ import com.dssv.gemini.GeminiApiClient;
 import com.dssv.gemini.GeminiModelInfo; 
 
 import com.dssv.database.DatabaseClient; 
+
 import com.dssv.agents.NotifierAgent;    
-import com.dssv.agents.RetrieverAgent;   
-import com.dssv.pojos.Assignment;         
-import com.dssv.pojos.Feedback;           
+import com.dssv.agents.RetrieverAgent;
+
+import com.dssv.pojos.*;       
+
 import com.dssv.logic.AssignmentGenerator; 
 import com.dssv.logic.AssignmentUpdater;   
 
 import java.util.List;
 import java.util.Objects;
+
 import java.io.IOException; // For potential exceptions from GeminiApiClient
 
 public class TeacherAgent {
@@ -300,21 +303,24 @@ public class TeacherAgent {
         return updatedAssignment;
     }
 
-    // --- Helper Functions ---
-
     /**
      * fetch_from_db: Helper function to fetch student's previous assignments.
      */
-    private List<Assignment> fetchFromDb(String studentId) throws Exception {
+    public List<Assignment> fetchFromDb(String studentId) throws Exception {
         // Delegate to the database client
         return databaseClient.fetchAssignmentsByStudentId(studentId);
+    }
+
+    public Assignment fetchAssignmentById(String assignmentId) throws Exception {
+        // Delegate to the database client
+        return databaseClient.fetchAssignmentById(assignmentId);
     }
 
     /**
      * push_to_db: Helper function to push the new/updated assignment to the database.
      * Assumes the database client handles associating the assignment with the studentId.
      */
-    private void pushToDb(String studentId, Assignment assignment) throws Exception {
+    public void pushToDb(String studentId, Assignment assignment) throws Exception {
         // Delegate to the database client
         databaseClient.saveAssignment(studentId, assignment);
     }
@@ -327,7 +333,7 @@ public class TeacherAgent {
     /**
      * Notify: Helper to notify the teacher about a new or updated assignment for review.
      */
-    private void notifyTeacher(Assignment assignment) throws Exception {
+    public void notifyTeacher(Assignment assignment) throws Exception {
         // Delegate to the notifier agent
         notifierAgent.notifyTeacher(assignment);
     }
@@ -442,6 +448,10 @@ public class TeacherAgent {
 
          System.out.println("TeacherAgent: Received chat response from Gemini.");
          return responseText;
+     }
+
+     public List<Message> fetchConversationHistory(String studentId, String assignmentId) throws Exception {
+         return databaseClient.fetchConversationHistory(studentId, assignmentId);
      }
 
     // Helper for escaping JSON strings within the discuss method payload construction

@@ -1,6 +1,12 @@
-package com.dssv.logic
+package com.dssv.logic;
 
-class AssignmentUpdater {
+import com.dssv.pojos.*;
+import com.dssv.gemini.GeminiApiClient;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class AssignmentUpdater {
 
      private static String escapeJsonPrompt(String input) {
           if (input == null) return "";
@@ -41,9 +47,13 @@ class AssignmentUpdater {
         // --- Parse response and update the existing assignment object (Use a JSON library!) ---
          // Or create a new one - let's update the existing one here.
          try {
-              String desc = AssignmentGenerator.extractJsonValue(jsonResponse, "description"); // Reuse extractor
-              String code = AssignmentGenerator.extractJsonValue(jsonResponse, "code");
-              String tests = AssignmentGenerator.extractJsonValue(jsonResponse, "testCases");
+              ObjectMapper mapper = new ObjectMapper();
+              JsonNode root = mapper.readTree(jsonResponse);
+
+               // Safely extract fields (returns empty string if missing)
+              String desc  = root.path("description").asText("");
+              String code  = root.path("code").asText("");
+              String tests = root.path("testCases").asText("");
 
               // Update only if generation was successful (value is not null)
               if (desc != null) existingAssignment.setDescription(desc);

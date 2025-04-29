@@ -1,5 +1,6 @@
-package com.dssv.pojos
-class Assignment {
+package com.dssv.pojos;
+
+public class Assignment {
     private String id;
     private String studentId; // Important for solo assignments and updates
     private String description;

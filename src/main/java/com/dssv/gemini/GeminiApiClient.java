@@ -71,12 +71,7 @@ public class GeminiApiClient {
         throws IOException, InterruptedException {
         String url = GeminiModelInfo.getGenerateContentUrl(modelId, apiKey);
         HttpResponse<String> response = sendRequest(url, payload);
-        JsonNode root = new ObjectMapper().readTree(response.body());
-        // Extract the first candidate’s text
-        return root.path("candidates").get(0)
-                .path("content")
-                .path("parts").get(0)
-                .path("text").asText();
+        return extractTextFromResponse(response.body());
     }
 
     public static void processStream(String responseBody, Consumer<String> onChunk, ObjectMapper mapper) {
@@ -172,6 +167,7 @@ public class GeminiApiClient {
         );
 
         HttpResponse<String> response = sendRequest(url, jsonPayload);
+        System.out.println("Response Body: " + response.body()); // Debugging output
         return extractTextFromResponse(response.body());
     }
 
@@ -370,24 +366,12 @@ public class GeminiApiClient {
 
     // WARNING: Very basic parsing. Use a JSON library (Jackson, Gson, org.json) for robustness.
     private String extractTextFromResponse(String responseBody) throws IOException {
-        // Simple search for the first occurrence of text content
-        String marker = "\"text\": \"";
-        int start = responseBody.indexOf(marker);
-        if (start == -1) {
-             // Maybe it's a function call or code execution response? Or error?
-             System.err.println("Warning: Could not find 'text' field in response body:\n" + responseBody);
-             return "[No text content found]"; // Or throw exception
-        }
-        start += marker.length();
-        int end = responseBody.indexOf("\"", start);
-        if (end == -1) {
-            throw new IOException("Could not parse text content from response: " + responseBody);
-        }
-        // Handle basic JSON escape sequences like \n, \\, \"
-        return responseBody.substring(start, end)
-                 .replace("\\n", "\n")
-                 .replace("\\\"", "\"")
-                 .replace("\\\\", "\\");
+        JsonNode root = new ObjectMapper().readTree(responseBody);
+        // Extract the first candidate’s text
+        return root.path("candidates").get(0)
+                .path("content")
+                .path("parts").get(0)
+                .path("text").asText();
     }
 
     // WARNING: Very basic parsing. Use a JSON library for robustness.

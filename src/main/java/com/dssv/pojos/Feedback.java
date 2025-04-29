@@ -1,5 +1,6 @@
-package com.dssv.pojos
-class Feedback {
+package com.dssv.pojos;
+
+public class Feedback {
     private String comments;
     // Could include specific suggestions, code snippets, etc.
 

@@ -6,7 +6,7 @@ import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.jackson.JacksonFeature; // Correct Jackson feature import
 
-import com.dssv.resources.GeminiApiResource; // CHANGE ME to your resource package
+import com.dssv.resources.*;
 
 import java.io.IOException;
 import java.net.URI;
@@ -25,6 +25,8 @@ public class Main {
         final ResourceConfig rc = new ResourceConfig()
             // Register resource classes directly (more explicit)
             .register(GeminiApiResource.class)
+            .register(TeacherAgentResource.class)
+            .register(NotificationResource.class)
              // Register features
             .register(JacksonFeature.class)    // Enable Jackson JSON processing
             .register(MultiPartFeature.class); // Enable multipart form data processing
