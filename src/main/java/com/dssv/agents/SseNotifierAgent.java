@@ -38,8 +38,10 @@ public class SseNotifierAgent implements NotifierAgent {
                 ? desc.substring(0, Math.min(desc.length(), 100)) + "…" 
                 : "N/A"
         );
-        if (assignment.getStudentId() != null) {
-            payload.put("studentId", assignment.getStudentId());
+        if (assignment.getStudentIds() != null) {
+            for (String studentId : assignment.getStudentIds()) {
+                payload.put("studentId", studentId);
+            }
         }
 
         try {

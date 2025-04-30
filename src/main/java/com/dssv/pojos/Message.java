@@ -14,6 +14,8 @@ public class Message {
         );
     }
 
+    public Message(){} // Default constructor needed by frameworks like Jackson for deserialization
+
     public Message(String role, String text) {
         this.role = role;
         this.text = text;

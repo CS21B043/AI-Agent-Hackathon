@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import java.io.IOException;
+import java.util.Collections;
 
 import com.dssv.pojos.*;
 import com.dssv.gemini.GeminiApiClient;
@@ -95,7 +96,7 @@ public class AssignmentGenerator {
           String code  = parts[1];
           String tests = parts[2]; 
           newAssignment.setId("temp-" + System.currentTimeMillis());
-          newAssignment.setStudentId(studentId);
+          newAssignment.setStudentIds(Collections.singletonList(studentId));
           // Set the extracted values
           newAssignment.setDescription(desc);
           newAssignment.setCode(code);
@@ -113,7 +114,7 @@ public class AssignmentGenerator {
     }
 
     public static Assignment generateGroupAssignment(
-            String pdfAnalysis, String retrievedContext, String topicOfInterest,
+            List<String> studentIds, String pdfAnalysis, String retrievedContext, String topicOfInterest,
             GeminiApiClient geminiClient, String modelId) throws Exception {
 
          // --- Construct a detailed prompt for Gemini ---
@@ -164,7 +165,7 @@ public class AssignmentGenerator {
                String tests = parts[2]; 
 
                newAssignment.setId("temp-" + System.currentTimeMillis());
-               newAssignment.setStudentId("Teacher-Generated"); // Placeholder 
+               newAssignment.setStudentIds(studentIds);
                // Set the extracted values
                newAssignment.setDescription(desc);
                newAssignment.setCode(code);

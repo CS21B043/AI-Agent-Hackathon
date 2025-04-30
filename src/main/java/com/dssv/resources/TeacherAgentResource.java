@@ -12,6 +12,7 @@ import com.dssv.pojos.*;
 
 import java.util.List;
 import java.util.Objects;
+import java.io.IOException;
 
 @Path("/teacher/v1")
 public class TeacherAgentResource {
@@ -20,7 +21,12 @@ public class TeacherAgentResource {
 
     @Inject
     public TeacherAgentResource() {
-        DatabaseClient databaseClient = new FileDatabaseClient("database");
+        DatabaseClient databaseClient;
+        try {
+            databaseClient = new FileDatabaseClient("database");
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to initialize DatabaseClient: " + e.getMessage(), e);
+        }
         NotifierAgent notifierAgent = new SseNotifierAgent();
         RetrieverAgent retrieverAgent = new BasicRetrieverAgent();
         // Load API key from environment
@@ -52,9 +58,7 @@ public class TeacherAgentResource {
                 pdfBytes,
                 topicOfInterest
             );
-            // Persist and notify
-            teacherAgent.pushToDb(studentId, assignment);
-            teacherAgent.notifyTeacher(assignment);
+            // Notify the student when done(Pushing to DB and notifying the teacher is done in the agent)
             teacherAgent.notifyStudent(studentId, assignment);
 
             return Response.ok(assignment).build();
@@ -87,15 +91,7 @@ public class TeacherAgentResource {
                 pdfBytes,
                 topicOfInterest
             );
-            studentIds.forEach(id -> {
-                try {
-                    teacherAgent.pushToDb(id, assignment);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    System.err.println("Failed to push assignment to DB for studentId: " + id);
-                }
-            });
-            teacherAgent.notifyTeacher(assignment);
+            // Notify all students when done (Pushing to DB and notifying the teacher is done in the agent)
             studentIds.forEach(id -> {
                 try {
                     teacherAgent.notifyStudent(id, assignment);
@@ -131,12 +127,23 @@ public class TeacherAgentResource {
                            .build();
         }
         try {
+            // Create Feedback object (assuming simple structure for now)
             Feedback f = new Feedback(feedbackReq.getComments());
-            Assignment updated = teacherAgent.updateAssignment(assignmentId, f);
-            teacherAgent.pushToDb(updated.getStudentId(), updated);
-            teacherAgent.notifyTeacher(updated);
-            teacherAgent.notifyStudent(updated.getStudentId(), updated);
 
+            // Agent handles fetching, updating content, saving, and notifying the teacher
+            Assignment updated = teacherAgent.updateAssignment(assignmentId, f);
+
+            // Notify all associated students about the update
+             if (updated != null && updated.getStudentIds() != null) {
+                 updated.getStudentIds().forEach(id -> {
+                     try {
+                         teacherAgent.notifyStudent(id, updated);
+                     } catch (Exception e) {
+                         System.err.println("Failed to notify student " + id + " after updating assignment " + updated.getId() + ": " + e.getMessage());
+                         e.printStackTrace();
+                     }
+                 });
+             }
             return Response.ok(updated).build();
         } catch (Exception e) {
             e.printStackTrace();
@@ -181,15 +188,10 @@ public class TeacherAgentResource {
                            .build();
         }
         try {
-            List<Message> history = teacherAgent.fetchConversationHistory(
-                req.getStudentId(),
-                req.getAssignmentId()
-            );
             String reply = teacherAgent.discuss(
                 req.getStudentId(),
                 req.getAssignmentId(),
-                req.getMessage(),
-                history
+                req.getMessage()
             );
             return Response.ok(reply).build();
         } catch (Exception e) {
