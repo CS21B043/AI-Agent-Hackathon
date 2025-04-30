@@ -4,9 +4,10 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.jackson.JacksonFeature; // Correct Jackson feature import
+import org.glassfish.jersey.jackson.JacksonFeature;
 
 import com.dssv.resources.*;
+import com.dssv.filters.CorsFilter; // Import the CORS filter
 
 import java.io.IOException;
 import java.net.URI;
@@ -21,19 +22,16 @@ public class Main {
     // Starts Grizzly HTTP server exposing JAX-RS resources defined in this application.
     public static HttpServer startServer() {
         // Create a resource configuration that scans for JAX-RS resources and providers
-        // in the com.dssv.resources package (or register classes explicitly)
         final ResourceConfig rc = new ResourceConfig()
             // Register resource classes directly (more explicit)
             .register(GeminiApiResource.class)
             .register(TeacherAgentResource.class)
             .register(NotificationResource.class)
             .register(EvaluatorAgentResource.class)
-             // Register features
+            // Register features
             .register(JacksonFeature.class)    // Enable Jackson JSON processing
-            .register(MultiPartFeature.class); // Enable multipart form data processing
-
-            // Alternatively, scan packages (less explicit):
-            // .packages("com.dssv.resources"); // CHANGE ME
+            .register(MultiPartFeature.class)  // Enable multipart form data processing
+            .register(CorsFilter.class);       // Register CORS filter
 
         // Create and start a new instance of grizzly http server
         // exposing the Jersey application at BASE_URI
@@ -46,7 +44,7 @@ public class Main {
         Logger.getLogger("").setLevel(Level.INFO); // Set root logger level
         Logger.getLogger("org.glassfish.grizzly").setLevel(Level.WARNING); // Reduce Grizzly noise if needed
 
-        System.out.println("Starting Gemini API server...");
+        System.out.println("Starting Gemini API server with CORS support...");
         final HttpServer server = startServer();
         System.out.println(String.format("Jersey app started with endpoints available at "
                 + "%s\nHit Ctrl-C to stop it...", BASE_URI));
