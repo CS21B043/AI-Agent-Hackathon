@@ -1,5 +1,6 @@
 package com.dssv.agents;
 
+import com.dssv.logic.KeywordExtractor;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +15,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public class BasicRetrieverAgent implements RetrieverAgent {
 
@@ -40,11 +43,25 @@ public class BasicRetrieverAgent implements RetrieverAgent {
         if (query == null || query.isBlank()) {
             return "[Retriever: No query provided]";
         }
-        query = query + " assignment";
-        StringBuilder results = new StringBuilder();
-        String encodedQuery = URLEncoder.encode(query + " in:file language:python", StandardCharsets.UTF_8);
 
-        // --- 1. GitHub Code Search via REST API ---
+        StringBuilder results = new StringBuilder();
+
+        // 1) Extract top 5 keywords
+        List<String> keywords = KeywordExtractor.topKeywords(query, 5);
+        if (keywords.isEmpty()) {
+            // Fallback: split on whitespace
+            keywords = Arrays.stream(query.split("\\s+"))
+                            .limit(5)
+                            .map(String::toLowerCase)
+                            .collect(Collectors.toList());
+        }
+
+        // 2) Build focused GitHub search query
+        String focused = String.join(" ", keywords) + " in:file language:python";
+
+        String encodedQuery = URLEncoder.encode(focused, StandardCharsets.UTF_8);
+
+        // --- 3. GitHub Code Search via REST API ---
         results.append("GitHub Code Context (API):\n");
         try {
             // Build and send search request

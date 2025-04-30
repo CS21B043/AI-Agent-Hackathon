@@ -27,7 +27,7 @@ public class AssignmentUpdater {
                      .append("Test Cases: ").append(escapeJsonPrompt(existingAssignment.getTestCases())).append("\n\n");
 
         promptBuilder.append("Teacher Feedback:\n")
-                     .append(escapeJsonPrompt(feedback.getComments())).append("\n\n");
+                     .append(escapeJsonPrompt(feedback.getcomments())).append("\n\n");
 
         promptBuilder.append("Generate the updated assignment.\n")
                       .append("Format the output as a JSON object with the updated keys: 'description', 'code', 'testCases'.\n")

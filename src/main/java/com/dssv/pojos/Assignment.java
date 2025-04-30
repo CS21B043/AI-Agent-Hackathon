@@ -11,6 +11,7 @@ public class Assignment {
     private String description;
     private String code; // Could be starter code, or expected structure
     private String testCases; // Could be text description or actual test code
+    private String sources; // Optional field for sources or references
 
     // Constructors
     // Constructor for creating a new assignment (ID might be generated later)
@@ -38,6 +39,10 @@ public class Assignment {
     // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+
+    // Getters and Setters
+    public String getSources() { return sources; }
+    public void setSources(String sources) { this.sources = sources; }
 
     // Getter for the list
     public List<String> getStudentIds() {

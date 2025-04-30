@@ -64,9 +64,10 @@ public class TeacherAgent {
 
         LOGGER.log(Level.INFO, "TeacherAgent: Creating solo assignment for student: {0}", studentId);
 
-        // 1. Fetch previous assignments
-        List<Assignment> previousAssignments = fetchFromDb(studentId);
-        LOGGER.log(Level.INFO, "TeacherAgent: Fetched {0} previous assignments.", (previousAssignments == null ? 0 : previousAssignments.size()));
+        // 1. Fetch previous FEEDBACK << CHANGE >>
+        List<Feedback> previousFeedbacks = databaseClient.fetchFeedbacksByStudentId(studentId);
+        LOGGER.log(Level.INFO, "TeacherAgent: Fetched {0} previous feedbacks.", (previousFeedbacks == null ? 0 : previousFeedbacks.size()));
+
 
         // 2. Analyze PDF
         String pdfAnalysisText = analyzePdf(pdfBytes, "Analyze the key concepts and potential programming assignment ideas from the provided document content. Focus on topics suitable for a personalized coding assignment.");
@@ -78,7 +79,7 @@ public class TeacherAgent {
         LOGGER.info("TeacherAgent: Generating personalized assignment...");
         Assignment newAssignment = AssignmentGenerator.generatePersonalizedAssignment(
                 studentId,
-                previousAssignments,
+                previousFeedbacks,
                 pdfAnalysisText,
                 retrievedContext,
                 topicOfInterest,
@@ -93,6 +94,7 @@ public class TeacherAgent {
             newAssignment.setId("asgn-" + UUID.randomUUID().toString()); // Example ID generation
             LOGGER.log(Level.INFO, "Generated ID for new assignment: {0}", newAssignment.getId());
         }
+        newAssignment.setSources(retrievedContext); // Set sources if needed
         pushToDb(newAssignment);  // << CHANGE >>: Pass only the assignment object
         LOGGER.info("TeacherAgent: Assignment saved.");
 
@@ -142,6 +144,7 @@ public class TeacherAgent {
              newAssignment.setId("asgn-" + UUID.randomUUID().toString()); // Example ID generation
              LOGGER.log(Level.INFO, "Generated ID for new group assignment: {0}", newAssignment.getId());
         }
+        newAssignment.setSources(retrievedContext); // Set sources if needed
         // 4. Push the single assignment object to the database
         LOGGER.info("TeacherAgent: Saving group assignment to DB...");
         pushToDb(newAssignment); // << CHANGE >>: Pass only the assignment object

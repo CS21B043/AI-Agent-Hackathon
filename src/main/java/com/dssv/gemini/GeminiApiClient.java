@@ -171,6 +171,12 @@ public class GeminiApiClient {
         return extractTextFromResponse(response.body());
     }
 
+    public String generateTextFromPayload(String modelId, String payload) throws IOException, InterruptedException {
+        String url = GeminiModelInfo.getGenerateContentUrl(modelId, apiKey);
+        HttpResponse<String> response = sendRequest(url, payload);
+        return extractTextFromResponse(response.body());
+    }
+
 
     // --- Image Generation ---
     // Note: Uses a model assumed to support image generation output.

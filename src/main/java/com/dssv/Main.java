@@ -27,6 +27,7 @@ public class Main {
             .register(GeminiApiResource.class)
             .register(TeacherAgentResource.class)
             .register(NotificationResource.class)
+            .register(EvaluatorAgentResource.class)
              // Register features
             .register(JacksonFeature.class)    // Enable Jackson JSON processing
             .register(MultiPartFeature.class); // Enable multipart form data processing

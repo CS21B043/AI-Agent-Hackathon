@@ -4,7 +4,6 @@ import com.dssv.pojos.Assignment;
 import com.dssv.services.NotificationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,8 +12,12 @@ import java.util.Map;
  */
 public class SseNotifierAgent implements NotifierAgent {
 
-    @Inject
     private NotificationService notificationService;
+
+    public SseNotifierAgent() {
+        NotificationService notificationService = new NotificationService();
+        // Default constructor
+    }
 
     // Reuse a single mapper instance
     private static final ObjectMapper objectMapper = new ObjectMapper();
