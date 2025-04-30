@@ -4,6 +4,10 @@
 **Team:** DSSV  
 **Language Category:** Java  
 
+### Frontend Repository  
+
+The frontend for this project is available in a separate repository. You can find it here: [DSSV-Agent Frontend Repository](https://github.com/Myst9/AI-Agent-Hackathon-Frontend/tree/main)  
+
 ## 1. Introduction  
 
 DSSV-Agent is an AI-powered system designed to automate and personalize the coding assignment lifecycle for educational settings. Built entirely in Java, it leverages AI (specifically Google's Gemini models) to generate assignments, evaluate student submissions against hidden test cases, provide tailored feedback, and facilitate student-teacher interaction via a chatbot interface. The core idea is to create a continuous, feedback-driven loop that adapts to individual student needs while incorporating Human-in-the-Loop (HITL) for teacher oversight and quality control.  
