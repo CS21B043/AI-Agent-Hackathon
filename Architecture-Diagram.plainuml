@@ -1,0 +1,56 @@
+@startuml
+title Architecture Diagram
+
+actor "User Interface\n(Web/Mobile App/CLI)" as UI
+
+package "Java Backend API\n(JAX-RS)" as API {
+
+  rectangle "Teacher Agent" as TeacherAgent
+  rectangle "Evaluator Agent" as EvaluatorAgent
+  rectangle "Retriever Agent" as RetrieverAgent
+
+  rectangle "DatabaseClient" as DBC
+  rectangle "GeminiApiClient" as GeminiClient
+
+}
+
+database "Database\n(Assignments, Feedback, History)" as DB
+
+rectangle "Gemini API" as GeminiAPI
+rectangle "GitHub API" as GitHubAPI
+
+
+' --- Layout and Relationships ---
+
+UI -down-> API : Interacts via
+
+API --> TeacherAgent : Delegates tasks
+API --> EvaluatorAgent : Delegates tasks
+API --> RetrieverAgent : Delegates tasks
+
+
+' Interactions via Gemini Client
+TeacherAgent --> GeminiClient : Uses
+EvaluatorAgent --> GeminiClient : Uses
+RetrieverAgent --> GeminiClient : Uses
+
+GeminiClient --> GeminiAPI : Calls
+
+' Interactions with Database
+TeacherAgent --> DBC : Accesses state
+EvaluatorAgent --> DBC : Accesses state
+RetrieverAgent --> DBC : Accesses state
+DBC --> DB : Reads/Writes
+
+' Interactions with GitHub (positioned closer to Retriever Agent)
+RetrieverAgent --> GitHubAPI : Uses dedicated client
+
+
+' Optional: Add notes or specific interactions
+' TeacherAgent --> DB : Persists Assignments
+' EvaluatorAgent --> DB : Persists Feedback
+' RetrieverAgent --> DB : Persists Feedback
+' RetrieverAgent --> DB : Persists History
+
+
+@enduml

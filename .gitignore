@@ -1,5 +1,8 @@
 target/
 *.env
-*.png
 *.secret
-database/
+database/assignments
+database/conversations
+database/feedbacks
+*.txt
+*.json
