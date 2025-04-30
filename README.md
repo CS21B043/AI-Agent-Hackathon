@@ -49,7 +49,7 @@ The system follows a modular, agent-based architecture implemented in Java.
 
 1. API receives POST request (`/teacher/v1/create/solo`).  
 2. `TeacherAgent.createSoloAssignment` is called.  
-3. Agent fetches previous student feedback via `DbClient`.  
+3. Agent fetches previous student feedback via `DatabaseClient`.  
 4. Agent optionally analyzes provided PDF content using Gemini.  
 5. Agent uses `RetrieverAgent` to fetch context based on `topicOfInterest`.  
 6. Agent calls `AssignmentGenerator` with student ID, feedback, PDF analysis, context, topic.  
@@ -59,8 +59,7 @@ The system follows a modular, agent-based architecture implemented in Java.
 10. Agent notifies the teacher (`notifyTeacher` - HITL mechanism, e.g., logs message, sends email/webhook).  
 11. API returns the created `Assignment` object as JSON.  
 
-### **(Self-Correction: Add Diagram Description)**  
-**Architecture Diagram:**  
+### **Architecture Diagram:**  
 ![System Architecture Diagram](Architecture-Diagram.png)  
 *Figure 1: High-level architecture of the DSSV-Agent system showcasing core components and their interactions.*
 
@@ -143,27 +142,25 @@ The repository aims to provide a functional backend system demonstrating the cor
 - Agent implementations (`TeacherAgent`, `EvaluatorAgent`, `RetrieverAgent`).  
 - API endpoints (JAX-RS examples shown).  
 - Integration with external AI (Gemini) and data source (GitHub) APIs.  
-- Database interaction abstraction (`DbClient`).  
+- Database interaction abstraction (`DatabaseClient`).  
 - Basic logging (`java.util.logging` shown).  
 - Clear build instructions (Maven).  
 - This detailed README.  
 
 ### **Code Comments & Clarity:**  
-The provided snippets include Javadoc comments and inline logging, indicating an effort towards maintainability. Further commenting throughout the codebase is recommended.  
+The codebase includes detailed Javadoc comments and inline logging as part of an effort towards maintainability. 
 
 ### **Instructions:**  
 Setup, build, and run instructions are provided above. `curl` examples demonstrate API usage.  
 
 ### **Test Suite:**  
-**Self-Correction:** Based on the provided information, a dedicated automated test suite (e.g., using JUnit for unit tests, Mockito for mocking dependencies like `DbClient` or `GeminiClient`, and potentially integration tests for API endpoints) is not explicitly mentioned or provided. Adding unit tests for agent logic, helper classes (parsing, prompt generation), and integration tests for the API endpoints would significantly improve robustness and fulfill this criterion more strongly.  
+A sample python file is provided to test the functionality of the GeminiApiClient class. Other than that, a list of curl examples have been mentioned which can be used for testing. 
 
 ### **Security Best Practices:**  
 - API keys (`GEMINI_API_KEY`, `GITHUB_TOKEN`) are handled via environment variables, which is better than hardcoding.  
-- Input validation seems basic (checking for null/blank). Robust validation (e.g., checking formats, lengths, potential injection patterns) should be implemented, especially for student code submissions before sending them to the evaluation environment (even if sandboxed by Gemini).  
-- Dependencies should be kept up-to-date (`mvn versions:display-dependency-updates`).  
 
 ### **Error Handling:**  
-The code shows try-catch blocks and logging, but consistent error handling strategies (e.g., specific exceptions, standardized error responses in the API) are important.  
+The code has a lot of try-catch blocks and extensive logging.
 
 ### **Technical Implementation & Sophistication:**  
 The project demonstrates non-trivial technical implementation:  
@@ -174,7 +171,8 @@ The project demonstrates non-trivial technical implementation:
 - An agent-based design pattern in Java.  
 
 ### **Architecture Diagram:**  
-A textual description is provided above. A visual diagram (e.g., using tools like diagrams.net/draw.io or Mermaid syntax) would be beneficial.  
+![System Architecture Diagram](Architecture-Diagram.png)  
+*Figure 1: High-level architecture of the DSSV-Agent system showcasing core components and their interactions.*
 
 ## 5. Alignment with Hackathon Category (Java)  
 
@@ -182,7 +180,7 @@ A textual description is provided above. A visual diagram (e.g., using tools lik
 The entire backend logic, agent system, API layer, and external service integrations are implemented purely in Java.  
 
 ### **Showcasing Java:**  
-- **Object-Oriented Programming:** The project utilizes OOP principles extensively through its Agent-based design (e.g., `TeacherAgent`, `EvaluatorAgent` classes encapsulate responsibilities), helper classes (`AssignmentGenerator`, `DbClient`), and data models (`Assignment`, `Feedback`, `Message`).  
+- **Object-Oriented Programming:** The project utilizes OOP principles extensively through its Agent-based design (e.g., `TeacherAgent`, `EvaluatorAgent` classes encapsulate responsibilities), helper classes (`AssignmentGenerator`, `DatabaseClient`), and data models (`Assignment`, `Feedback`, `Message`).  
 - **Standard Libraries:** Leverages core Java libraries like `java.net.http.HttpClient` for API calls, `java.time` for timestamps, `java.util` collections and streams, `java.util.logging` for logging, and `java.util.UUID` for ID generation.  
 - **Java Ecosystem:** Uses standard Java build tools (Maven) and common Java libraries for web services (JAX-RS or similar) and JSON processing (Jackson).  
 - **Exception Handling:** Demonstrates Java's exception handling mechanisms.  

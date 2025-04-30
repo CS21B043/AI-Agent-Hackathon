@@ -1,6 +1,7 @@
 # DSSV-Agent: Personalized AI Tutor for Coding Education
 
 **Hackathon Project Pitch**
+
 **Team:** DSSV
 
 ## 1. The Problem: Scaling Quality Coding Education
@@ -50,7 +51,6 @@ DSSV-Agent is an innovative **AI-powered learning loop** designed to revolutioni
     * **Objectivity:** Using automated tests for evaluation aims for objective assessment of code correctness, reducing potential human grading bias.
     * **Transparency (Area for Growth):** While logs exist, future versions could enhance transparency by explaining *why* an assignment was personalized in a specific way based on past feedback.
     * **Fairness:** The personalization aims to help students based on their *demonstrated* needs. HITL helps mitigate potential biases that could arise from the AI model itself. Careful prompt engineering and teacher review are key.
-    * **Privacy & Security:** Handling student code and performance data requires care. Using environment variables for keys is a first step; robust data handling policies and secure infrastructure would be needed for production deployment.
 
 ### Solution Quality & Alignment (Covered in Technical README)
 
