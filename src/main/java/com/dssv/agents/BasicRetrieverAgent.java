@@ -1,5 +1,10 @@
-package com.dssv.agents; // Or dedicated package e.g., com.dssv.retriever
+package com.dssv.agents;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.jsoup.Jsoup;               // still used if you want to add any Jsoup logic later
+import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -7,99 +12,156 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 
 public class BasicRetrieverAgent implements RetrieverAgent {
 
     private final HttpClient httpClient;
+    private static final String USER_AGENT = "DSSVTeacherAgent/1.0 (+https://example.com/bot)";
+    private static final int TIMEOUT_MS = 10_000;
+    // GitHub API token (optional—for higher rate limits/private repos)
+    private static final String GITHUB_TOKEN = System.getenv("GITHUB_TOKEN");
+    // How many top results to return
+    private static final int MAX_HITS = 5;
+
+    // JSON mapper for GitHub API responses
+    private final ObjectMapper mapper;
 
     public BasicRetrieverAgent() {
         this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(5)) // Short timeout
+                .connectTimeout(Duration.ofSeconds(5))
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
+        this.mapper = new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     @Override
-    public String retrieve(String query) throws Exception {
+    public String retrieve(String query) {
         if (query == null || query.isBlank()) {
             return "[Retriever: No query provided]";
         }
 
+        String ModifiedQuery = query + " Assignments";
         StringBuilder results = new StringBuilder();
-        String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
+        String encodedQuery = URLEncoder.encode(ModifiedQuery, StandardCharsets.UTF_8);
 
-        // 1. DuckDuckGo Instant Answer API (Simple Web Search)
+        // --- GitHub Code Search via REST API ---
+        results.append("GitHub Code Context (API):\n");
         try {
-            // format=json, no_html=1 (remove HTML tags), skip_disambig=1 (skip disambiguation pages)
-            String ddgUrl = "https://api.duckduckgo.com/?q=" + encodedQuery + "&format=json&no_html=1&skip_disambig=1&pretty=1";
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(ddgUrl))
-                    .timeout(Duration.ofSeconds(5))
-                    .header("Accept", "application/json")
-                     // DuckDuckGo API doesn't strictly need a User-Agent, but it's good practice
-                    .header("User-Agent", "DSSVTeacherAgent/1.0")
-                    .GET()
-                    .build();
+            // 1) Search code endpoint
+            String q = encodedQuery + "+in:file+language:python";
+            String apiUrl = "https://api.github.com/search/code?q=" + q;
+            HttpRequest.Builder searchReq = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .header("User-Agent", USER_AGENT)
+                    .timeout(Duration.ofMillis(TIMEOUT_MS))
+                    .GET();
+            if (GITHUB_TOKEN != null && !GITHUB_TOKEN.isBlank()) {
+                searchReq.header("Authorization", "token " + GITHUB_TOKEN);
+            }
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> resp = httpClient.send(
+                    searchReq.build(),
+                    HttpResponse.BodyHandlers.ofString()
+            );
 
-            if (response.statusCode() == 200) {
-                String responseBody = response.body();
-                // VERY basic parsing - assumes structure like {"AbstractText" : "...", "RelatedTopics": [...]}
-                // Use a JSON library (like Jackson/Gson) in production!
-                String abstractText = extractSimpleJsonValue(responseBody, "AbstractText");
-                //String heading = extractSimpleJsonValue(responseBody, "Heading"); // Could also grab heading
+            if (resp.statusCode() != 200) {
+                results.append("[GitHub API error: HTTP ").append(resp.statusCode()).append("]\n");
+                return results.toString();
+            }
 
-                 results.append("Web Context (from DuckDuckGo):\n");
-                 if (abstractText != null && !abstractText.isBlank()) {
-                     results.append("- Summary: ").append(abstractText).append("\n");
-                 } else {
-                     results.append("- No direct summary found.\n");
-                 }
-                 // Could try parsing RelatedTopics for more links/text if Abstract is empty
+            // 2) Deserialize
+            CodeSearchResult searchResult = mapper.readValue(resp.body(), CodeSearchResult.class);
+            if (searchResult.items == null || searchResult.items.isEmpty()) {
+                results.append("No code results found.\n");
+                return results.toString();
+            }
 
-            } else {
-                 results.append("[Retriever: DuckDuckGo query failed with status ")
-                        .append(response.statusCode()).append("]\n");
+            // 3) Enrich top N with repo descriptions
+            int count = Math.min(MAX_HITS, searchResult.items.size());
+            for (int i = 0; i < count; i++) {
+                CodeItem item = searchResult.items.get(i);
+                String fullName = item.repository.full_name;    // e.g. "owner/repo"
+                String fileUrl  = item.html_url;                // web URL to file
+                String path     = item.path;                    // file path in repo
+
+                // Fetch repo details for description
+                String desc = fetchRepoDescription(fullName);
+
+                results.append(String.format(
+                    "- [%s] %s\n" +
+                    "  • File Path: %s\n" +
+                    "  • URL: %s\n" +
+                    "  • Description: %s\n\n",
+                    fullName,
+                    item.name,
+                    path,
+                    fileUrl,
+                    desc
+                ));
             }
 
         } catch (Exception e) {
-             System.err.println("Retriever Agent: Error calling DuckDuckGo API: " + e.getMessage());
-             results.append("[Retriever: Error during web search: ").append(e.getMessage()).append("]\n");
-             // Don't re-throw, just log and continue to GitHub part for partial results
+            results.append("[GitHub API exception: ").append(e.getMessage()).append("]\n");
         }
-
-
-        // 2. GitHub Search Simulation
-        try {
-            String githubUrl = "https://github.com/search?q=" + encodedQuery + "+language%3APython&type=code"; // Sample: Add Python language filter
-             System.out.println("Retriever: Simulating GitHub code search: " + githubUrl);
-             results.append("\nSimulated GitHub Context:\n")
-                    .append("- Potential relevant code snippets or repositories might exist on GitHub.\n")
-                    .append("- Search URL: ").append(githubUrl).append("\n");
-             // In a real system: Use GitHub API (requires token) to search code/repos
-        } catch (Exception e) {
-             // Should not happen with just URL construction, but for safety:
-             System.err.println("Retriever Agent: Error constructing GitHub URL: " + e.getMessage());
-             results.append("[Retriever: Error during GitHub simulation]\n");
-        }
-
 
         return results.toString();
     }
 
-     // Extremely basic JSON extractor - ONLY for simple key: "value" pairs. Use a real parser!
-     private String extractSimpleJsonValue(String json, String key) {
-         String searchKey = "\"" + key + "\": \"";
-         int start = json.indexOf(searchKey);
-         if (start == -1) return null; // Key not found or not string value start
-         start += searchKey.length();
-         int end = json.indexOf("\"", start); // Find closing quote
-         if (end == -1) return null; // Malformed
-         // Basic unescaping for this simple case
-         return json.substring(start, end)
-                    .replace("\\\"", "\"") // Unescape quotes
-                    .replace("\\\\", "\\") // Unescape backslashes
-                    .replace("\\n", "\n"); // Unescape newlines
-     }
+    private String fetchRepoDescription(String fullRepoName) {
+        try {
+            String repoUrl = "https://api.github.com/repos/" + URLEncoder.encode(fullRepoName, StandardCharsets.UTF_8);
+            HttpRequest.Builder repoReq = HttpRequest.newBuilder()
+                    .uri(URI.create(repoUrl))
+                    .header("User-Agent", USER_AGENT)
+                    .timeout(Duration.ofMillis(TIMEOUT_MS))
+                    .GET();
+            if (GITHUB_TOKEN != null && !GITHUB_TOKEN.isBlank()) {
+                repoReq.header("Authorization", "token " + GITHUB_TOKEN);
+            }
+
+            HttpResponse<String> r = httpClient.send(
+                    repoReq.build(),
+                    HttpResponse.BodyHandlers.ofString()
+            );
+
+            if (r.statusCode() != 200) {
+                return "N/A";
+            }
+
+            RepoInfo repo = mapper.readValue(r.body(), RepoInfo.class);
+            return repo.description != null ? repo.description : "No description.";
+
+        } catch (IOException | InterruptedException e) {
+            return "Error fetching description.";
+        }
+    }
+
+    // --- JSON mapping classes for GitHub API ---
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class CodeSearchResult {
+        public int total_count;
+        public boolean incomplete_results;
+        public List<CodeItem> items;
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class CodeItem {
+        public String name;            // filename
+        public String path;            // path in repo
+        public String html_url;        // web URL: https://github.com/.../blob/...
+        public Repository repository;  // repo metadata
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Repository {
+        public String full_name;       // e.g. "owner/repo"
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class RepoInfo {
+        public String description;
+    }
 }
