@@ -63,8 +63,8 @@ The system follows a modular, agent-based architecture implemented in Java.
 10. Agent notifies the teacher (`notifyTeacher` - HITL mechanism, e.g., logs message, sends email/webhook).  
 11. API returns the created `Assignment` object as JSON.  
 
-### **Architecture Diagram:**  
-![System Architecture Diagram](Architecture-Diagram.png)  
+### **High-Level Architecture Diagram:**  
+![High-Level Architecture Diagram](Architecture-Flow-Diagram.png)  
 *Figure 1: High-level architecture of the DSSV-Agent system showcasing core components and their interactions.*
 
 ## 3. Setup and Running  
@@ -174,9 +174,9 @@ The project demonstrates non-trivial technical implementation:
 - Asynchronous operations (implied by `HttpClient` usage and potential notifications).  
 - An agent-based design pattern in Java.  
 
-### **Architecture Diagram:**  
+### **Architecture Diagram(UML):**  
 ![System Architecture Diagram](Architecture-Diagram.png)  
-*Figure 1: High-level architecture of the DSSV-Agent system showcasing core components and their interactions.*
+*Figure 2: UML Diagram of the DSSV-Agent implementation showcasing the fundamental classes and the interactions between them.*
 
 ## 5. Alignment with Hackathon Category (Java)  
 
